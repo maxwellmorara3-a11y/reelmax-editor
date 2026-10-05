@@ -16,15 +16,40 @@ jobs:
         with:
           flutter-version: '3.22.3'
           channel: 'stable'
-      - name: Recreate Android Project with Fixed Kotlin
+      - name: Nuke and Fix Kotlin 2.1.0
         run: |
-          flutter create . --org com.reelmax.editor --project-name reelmax_editor --platforms=android
-          # Fix Kotlin version to 1.9.22 - required by Flutter 3.22
-          sed -i 's/org.jetbrains.kotlin.android" version ".*/org.jetbrains.kotlin.android" version "1.9.22" apply false/' android/settings.gradle
-          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle || true
+          rm -rf android
+          flutter create . --org com.reelmax.editor --project-name reelmax_editor --platforms=android --no-overwrite
+          # Fix 1: settings.gradle - new Flutter projects
+          cat > android/settings.gradle << 'EOF'
+          pluginManagement {
+              def flutterSdkPath = {
+                  def properties = new Properties()
+                  file("local.properties").withInputStream { properties.load(it) }
+                  def flutterSdkPath = properties.getProperty("flutter.sdk")
+                  assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+                  return flutterSdkPath
+              }()
+              includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+              repositories { gradlePluginPortal(); google(); mavenCentral() }
+          }
+          plugins {
+              id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+              id "com.android.application" version "8.3.0" apply false
+              id "org.jetbrains.kotlin.android" version "2.1.0" apply false
+          }
+          include ":app"
+          EOF
+          # Fix 2: build.gradle - old projects that use ext.kotlin_version
+          if [ -f android/build.gradle ]; then
+            sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '2.1.0'/" android/build.gradle
+            sed -i 's/ext.kotlin_version = ".*"/ext.kotlin_version = "2.1.0"/' android/build.gradle
+          fi
+          echo "=== FIXED SETTINGS.GRADLE ==="
+          cat android/settings.gradle
       - run: flutter pub get
-      - run: flutter build apk --release --verbose
+      - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
         with:
-          name: ReelMax-APK
+          name: ReelMax-MIDNIGHT-ROMANCE-APK
           path: build/app/outputs/flutter-apk/app-release.apk
