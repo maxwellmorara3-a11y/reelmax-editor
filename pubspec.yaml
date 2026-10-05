@@ -1,12 +1,26 @@
 name: reelmax_editor
-description: ReelMax - CapCut Clone
+description: ReelMax Editor - CapCut style editor with AI Facebook Reel monetization. Midnight Romance.
 publish_to: 'none'
 version: 1.0.0+1
+
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: ">=3.22.0"
+
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.2
+  cupertino_icons: ^1.0.6
+  image_picker: ^1.0.8
+  video_player: ^2.8.2
+  flutter_ffmpeg_kit: ^6.0.0
+  path_provider: ^2.1.2
+  flutter_tts: ^4.0.2
+  lottie: ^3.1.2
+  google_fonts: ^6.2.1
+  video_trimmer: ^3.0.0
+  file_picker: ^8.1.0
+  permission_handler: ^11.3.1
+
 flutter:
   uses-material-design: true
