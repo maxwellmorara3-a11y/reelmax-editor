@@ -16,18 +16,17 @@ jobs:
         with:
           flutter-version: '3.22.3'
           channel: 'stable'
-      - name: Fix Kotlin + Gradle 8.4
+      - name: Fix Kotlin 2.1.0 + Gradle 8.4 + minSdk 24
         run: |
           rm -rf android
           flutter create . --org com.reelmax.editor --project-name reelmax_editor --platforms=android
-          # FIX 1: settings.gradle with Kotlin 2.1.0
           cat > android/settings.gradle << 'EOF'
           pluginManagement {
               def flutterSdkPath = {
                   def properties = new Properties()
                   file("local.properties").withInputStream { properties.load(it) }
                   def flutterSdkPath = properties.getProperty("flutter.sdk")
-                  assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+                  assert flutterSdkPath != null, "flutter.sdk not set"
                   return flutterSdkPath
               }()
               includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
@@ -40,9 +39,14 @@ jobs:
           }
           include ":app"
           EOF
-          # FIX 2: Gradle Wrapper 8.4 (REQUIRED for AGP 8.3.0)
           sed -i 's/gradle-.*-all.zip/gradle-8.4-all.zip/' android/gradle/wrapper/gradle-wrapper.properties
-          cat android/gradle/wrapper/gradle-wrapper.properties
+          # FIX minSdk 21 -> 24 for flutter_tts
+          echo "flutter.minSdkVersion=24" >> android/local.properties
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 24/' android/app/build.gradle
+          sed -i 's/minSdkVersion 21/minSdkVersion 24/' android/app/build.gradle
+          echo "=== APP BUILD.GRADLE ==="
+          grep -n "minSdk" android/app/build.gradle
+          cat android/local.properties
       - run: flutter pub get
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
