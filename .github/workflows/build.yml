@@ -16,11 +16,11 @@ jobs:
         with:
           flutter-version: '3.22.3'
           channel: 'stable'
-      - name: Nuke and Fix Kotlin 2.1.0
+      - name: Fix Kotlin + Gradle 8.4
         run: |
           rm -rf android
-          flutter create . --org com.reelmax.editor --project-name reelmax_editor --platforms=android --no-overwrite
-          # Fix 1: settings.gradle - new Flutter projects
+          flutter create . --org com.reelmax.editor --project-name reelmax_editor --platforms=android
+          # FIX 1: settings.gradle with Kotlin 2.1.0
           cat > android/settings.gradle << 'EOF'
           pluginManagement {
               def flutterSdkPath = {
@@ -40,13 +40,9 @@ jobs:
           }
           include ":app"
           EOF
-          # Fix 2: build.gradle - old projects that use ext.kotlin_version
-          if [ -f android/build.gradle ]; then
-            sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '2.1.0'/" android/build.gradle
-            sed -i 's/ext.kotlin_version = ".*"/ext.kotlin_version = "2.1.0"/' android/build.gradle
-          fi
-          echo "=== FIXED SETTINGS.GRADLE ==="
-          cat android/settings.gradle
+          # FIX 2: Gradle Wrapper 8.4 (REQUIRED for AGP 8.3.0)
+          sed -i 's/gradle-.*-all.zip/gradle-8.4-all.zip/' android/gradle/wrapper/gradle-wrapper.properties
+          cat android/gradle/wrapper/gradle-wrapper.properties
       - run: flutter pub get
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
