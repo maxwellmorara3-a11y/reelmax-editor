@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:largeHeap="true"
-        android:label="ReelMax"
+        android:label="ReelMax Editor"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity
