@@ -1,21 +1,17 @@
 name: reelmax_editor
-description: ReelMax Editor - MIDNIGHT ROMANCE - CapCut Clone
+description: ReelMax Editor
 publish_to: 'none'
 version: 1.0.0+1
-
 environment:
   sdk: '>=3.0.0 <4.0.0'
-
 dependencies:
   flutter:
     sdk: flutter
   image_picker: ^1.0.7
-  file_picker: ^8.0.0+1
   shared_preferences: ^2.2.2
   video_player: ^2.7.2
   path_provider: ^2.1.2
   audioplayers: ^5.2.1
   http: ^1.1.2
-
 flutter:
   uses-material-design: true
