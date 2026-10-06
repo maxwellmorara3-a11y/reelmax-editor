@@ -1,3 +1,4 @@
+import 'services/mpesa_service.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,6 +8,13 @@ import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+  Future<void> sendMpesa() async {
+    if(phone.text.length<10) return;
+    setState(()=>loading=true);
+    bool sent = await MpesaService.stkPush(phone.text, 1); // 1 KES test
+    setState(()=>{loading=false, showOtp=true});
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(sent? "✅ REAL STK Push sent to ${phone.text} - Check phone!" : "STK simulation - Enter 1234")));
+  }
 void main() => runApp(ReelMaxApp());
 
 // ===== YOUR VOICES + KEY =====
