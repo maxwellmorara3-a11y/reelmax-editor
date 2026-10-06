@@ -12,7 +12,6 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 
 void main() => runApp(ReelMaxApp());
 
-// ===== MPESA SERVICE INSIDE SAME FILE (NO SEPARATE FILE NEEDED) =====
 class MpesaService {
   static const String consumerKey = "kjklaZ9HGNzRBU9IhprGizMOggWhtuEfvHoNrvG3k7jh4TvD";
   static const String consumerSecret = "C5c3EHAPYJxRIYhuEkwGyFWxR9M8dJHmIpzCHCsdFC9JrYoRIwZ0mnujneZ1G98q";
@@ -45,7 +44,6 @@ class MpesaService {
   }
 }
 
-// ===== YOUR VOICES =====
 class AIVoiceService {
   static const String apiKey = "sk_6a0eab5c052308c5e89e94ee70d9455ecda45c73f8226208";
   static const Map<String, String> voices = {
@@ -111,10 +109,10 @@ class _EditorScreenState extends State<EditorScreen> {
         final code = await session.getReturnCode();
         if(ReturnCode.isSuccess(code)){
           setState((){exportStatus="Exported! $out"; exporting=false;});
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ BURNED watermark exported!")));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("BURNED watermark exported!")));
         } else {
           await widget.file.copy(out);
-          setState((){exportStatus="Exported (preview watermark) $out"; exporting=false;});
+          setState((){exportStatus="Exported (preview) $out"; exporting=false;});
         }
       });
     } catch(e){ setState((){exporting=false; exportStatus="Error: $e";}); }
@@ -128,13 +126,12 @@ class _EditorScreenState extends State<EditorScreen> {
 }
 
 class TemplatesScreen extends StatelessWidget {
-  final templates = [ {"name":"Midnight Love","color":Color(0xFF1A3A8F),"icon":Icons.favorite}, {"name":"Boda Love Story","color":Color(0xFFFF6B6B),"icon":Icons.motorcycle}, {"name":"Murang'a Sunset","color":Color(0xFFFFBE0B),"icon":Icons.wb_sunny}, {"name":"Heartbreak","color":Color(0xFF8338EC),"icon":Icons.heart_broken}, {"name":"Proposal","color":Color(0xFF06FFA5),"icon":Icons.diamond}, {"name":"Campus Romance","color":Color(0xFFFF006E),"icon":Icons.school}, ];
+  final templates = [ {"name":"Midnight Love","color":Color(0xFF1A3A8F),"icon":Icons.favorite}, {"name":"Boda Love Story","color":Color(0xFFFF6B6B),"icon":Icons.motorcycle}, {"name":"Muranga Sunset","color":Color(0xFFFFBE0B),"icon":Icons.wb_sunny}, {"name":"Heartbreak","color":Color(0xFF8338EC),"icon":Icons.heart_broken}, {"name":"Proposal","color":Color(0xFF06FFA5),"icon":Icons.diamond}, {"name":"Campus Romance","color":Color(0xFFFF006E),"icon":Icons.school}, ];
   @override
   Widget build(BuildContext context){ return SingleChildScrollView(padding: EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ Text("Trending Templates", style: TextStyle(fontSize:24, fontWeight: FontWeight.bold, color: Colors.white)), SizedBox(height:16), GridView.builder(shrinkWrap: true, physics: NeverScrollableScrollPhysics(), gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.8, crossAxisSpacing:12, mainAxisSpacing:12), itemCount: templates.length, itemBuilder: (c,i){ var t=templates[i]; return InkWell(onTap: ()=> Navigator.push(c, MaterialPageRoute(builder: (_)=> ScriptAnimatorScreen())), child: Container(decoration: BoxDecoration(color: t["color"] as Color, borderRadius: BorderRadius.circular(16)), child: Stack(children: [ Center(child: Icon(t["icon"] as IconData, size:50, color: Colors.white)), Positioned(bottom:10, left:10, right:10, child: Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)), child: Text(t["name"] as String, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold), textAlign: TextAlign.center))), ]))); }), ])); }
 }
 class ProjectsScreen extends StatelessWidget { @override Widget build(BuildContext context){return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.folder_open,size:60,color: Colors.white70), SizedBox(height:12), Text("Your Projects", style: TextStyle(color: Colors.white, fontSize:18))]));} }
 
-// ===== FIXED MPESA LOGIN =====
 class LoginScreen extends StatefulWidget { @override _LoginScreenState createState()=>_LoginScreenState(); }
 class _LoginScreenState extends State<LoginScreen> {
   TextEditingController phone = TextEditingController(text: "+2547");
@@ -143,15 +140,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> sendMpesa() async {
     if(phone.text.length<10) return;
-    setState(() {
-      loading = true;
-    });
+    setState(() { loading = true; });
     bool sent = await MpesaService.stkPush(phone.text, 1);
-    setState(() {
-      loading = false;
-      showOtp = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(sent? "✅ REAL STK Push sent to ${phone.text} - Check phone!" : "STK simulation - Enter 1234")));
+    setState(() { loading = false; showOtp = true; });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(sent? "REAL STK Push sent to ${phone.text} - Check phone!" : "STK simulation - Enter 1234")));
   }
 
   Future<void> verify() async {
@@ -161,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
     await prefs.setString("user_phone", phone.text);
     await prefs.setBool("is_pro", true);
     setState(() { loading = false; });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("✅ Logged in! PRO unlocked - ${phone.text}")));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Logged in! PRO unlocked - ${phone.text}")));
     Navigator.pop(context);
   }
 
@@ -173,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Container(padding: EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: Column(children: [
             TextField(controller: phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: "MPESA Number", prefixIcon: Icon(Icons.phone), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
             SizedBox(height:16), if(showOtp) TextField(controller: otp, decoration: InputDecoration(labelText: "OTP Code (use 1234)", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), keyboardType: TextInputType.number),
-            SizedBox(height:16), SizedBox(width: double.infinity, height:50, child: ElevatedButton(onPressed: loading? null : (showOtp? verify : sendMpesa), style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF00A651), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: loading? CircularProgressIndicator(color: Colors.white) : Text(showOtp? "Verify & Unlock PRO" : "Send MPESA STK Push", style: TextStyle(fontWeight: FontWeight.bold)))),
+            SizedBox(height:16), SizedBox(width: double.infinity, height:50, child: ElevatedButton(onPressed: loading? null : (showOtp? verify : sendMpesa), style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF00A651), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: loading? CircularProgressIndicator(color: Colors.white) : Text(showOtp? "Verify and Unlock PRO" : "Send MPESA STK Push", style: TextStyle(fontWeight: FontWeight.bold)))),
           ])),
         ])),
     );
@@ -182,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
 class ScriptAnimatorScreen extends StatefulWidget { @override _ScriptAnimatorScreenState createState()=>_ScriptAnimatorScreenState(); }
 class _ScriptAnimatorScreenState extends State<ScriptAnimatorScreen> {
-  TextEditingController scriptCtrl = TextEditingController(text: "In Murang'a, under midnight moon, she waited by the river. A boda light appears. He is here. Love is about midnight promises. This is MIDNIGHT ROMANCE.");
+  TextEditingController scriptCtrl = TextEditingController(text: "In Muranga, under midnight moon, she waited by the river. A boda light appears. He is here. Love is about midnight promises. This is MIDNIGHT ROMANCE.");
   bool generating=false; String status="8-min = 32 scenes + burned watermark"; String selectedVoice="Adam - Deep Male"; double progress=0;
   Future<void> generate() async {
     setState((){generating=true; progress=0;});
