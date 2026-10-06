@@ -16,12 +16,16 @@ jobs:
         with:
           flutter-version: '3.22.3'
           channel: 'stable'
-      - name: Fix All - Clean build.gradle
+      - name: Fix - Pin flutter_tts to 4.0.2 + Kotlin 2.1.0 + SDKs
         run: |
+          # 1. Pin flutter_tts to OLD version built with Kotlin 1.9 (compatible)
+          sed -i 's/flutter_tts:.*/flutter_tts: 4.0.2/' pubspec.yaml
+          cat pubspec.yaml | grep flutter_tts
+          
           rm -rf android
           flutter create . --org com.reelmax.editor --project-name reelmax_editor --platforms=android
           
-          # 1. settings.gradle with Kotlin 2.1.0 + Gradle 8.4
+          # 2. settings.gradle Kotlin 2.1.0 + Gradle 8.7 (stable for Flutter 3.22)
           cat > android/settings.gradle << 'EOF'
           pluginManagement {
               def flutterSdkPath = {
@@ -39,15 +43,15 @@ jobs:
           }
           include ":app"
           EOF
-          sed -i 's/gradle-.*-all.zip/gradle-8.4-all.zip/' android/gradle/wrapper/gradle-wrapper.properties
+          sed -i 's/gradle-.*-all.zip/gradle-8.7-all.zip/' android/gradle/wrapper/gradle-wrapper.properties
           
-          # 2. local.properties SDKs
+          # 3. SDKs
           echo "flutter.minSdkVersion=24" >> android/local.properties
-          echo "flutter.compileSdkVersion=36" >> android/local.properties
-          echo "flutter.targetSdkVersion=36" >> android/local.properties
+          echo "flutter.compileSdkVersion=34" >> android/local.properties
+          echo "flutter.targetSdkVersion=34" >> android/local.properties
           echo "flutter.ndkVersion=25.1.8937393" >> android/local.properties
           
-          # 3. CLEAN app/build.gradle - OVERWRITE COMPLETELY - FIXES JVM 17 + minSdk 24
+          # 4. CLEAN build.gradle - JAVA 17 + SDK 24/34 + FORCE kotlin-stdlib 2.1.0
           cat > android/app/build.gradle << 'EOF'
           plugins {
               id "com.android.application"
@@ -71,7 +75,7 @@ jobs:
 
           android {
               namespace "com.reelmax.editor"
-              compileSdk 36
+              compileSdk 34
               ndkVersion "25.1.8937393"
 
               compileOptions {
@@ -89,7 +93,7 @@ jobs:
               defaultConfig {
                   applicationId "com.reelmax.editor"
                   minSdk 24
-                  targetSdk 36
+                  targetSdk 34
                   versionCode flutterVersionCode.toInteger()
                   versionName flutterVersionName
               }
@@ -101,16 +105,24 @@ jobs:
               }
           }
 
+          // FORCE all Kotlin stdlib to 2.1.0 - fixes 2.2.20 conflict
+          configurations.all {
+              resolutionStrategy {
+                  force "org.jetbrains.kotlin:kotlin-stdlib:2.1.0"
+                  force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.0"
+                  force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.0"
+              }
+          }
+
           flutter {
               source '../..'
           }
           EOF
           
-          echo "=== CLEAN BUILD.GRADLE ==="
           cat android/app/build.gradle
           
       - run: flutter pub get
-      - run: flutter build apk --release
+      - run: flutter build apk --release --no-tree-shake-icons
       - uses: actions/upload-artifact@v4
         with:
           name: ReelMax-MIDNIGHT-ROMANCE-APK
