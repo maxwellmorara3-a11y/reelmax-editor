@@ -16,18 +16,18 @@ jobs:
         with:
           flutter-version: '3.22.3'
           channel: 'stable'
-      - name: Ultimate Fix - Hardcode SDK 24 + 36 + NDK
+      - name: Ultimate Fix - All SDKs + JVM 17
         run: |
           rm -rf android
           flutter create . --org com.reelmax.editor --project-name reelmax_editor --platforms=android
-          # Fix 1: settings.gradle Kotlin 2.1.0
+          
+          # 1. Fix settings.gradle Kotlin 2.1.0
           cat > android/settings.gradle << 'EOF'
           pluginManagement {
               def flutterSdkPath = {
                   def properties = new Properties()
                   file("local.properties").withInputStream { properties.load(it) }
-                  def flutterSdkPath = properties.getProperty("flutter.sdk")
-                  return flutterSdkPath
+                  return properties.getProperty("flutter.sdk")
               }()
               includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
               repositories { gradlePluginPortal(); google(); mavenCentral() }
@@ -39,32 +39,50 @@ jobs:
           }
           include ":app"
           EOF
+          
           sed -i 's/gradle-.*-all.zip/gradle-8.4-all.zip/' android/gradle/wrapper/gradle-wrapper.properties
           
-          # Fix 2: FORCE local.properties
+          # 2. Force SDK versions
           echo "flutter.minSdkVersion=24" >> android/local.properties
           echo "flutter.compileSdkVersion=36" >> android/local.properties
           echo "flutter.targetSdkVersion=36" >> android/local.properties
           echo "flutter.ndkVersion=25.1.8937393" >> android/local.properties
           
-          # Fix 3: HARDCODE in app/build.gradle - OVERWRITE the lines that say flutter.minSdkVersion
-          # This catches BOTH old and new Flutter formats
+          # 3. HARDCODE SDKs in build.gradle
+          sed -i 's/flutter.minSdkVersion/24/' android/app/build.gradle
+          sed -i 's/flutter.compileSdkVersion/36/' android/app/build.gradle
+          sed -i 's/flutter.targetSdkVersion/36/' android/app/build.gradle
+          sed -i 's/flutter.ndkVersion/"25.1.8937393"/' android/app/build.gradle
           sed -i 's/minSdkVersion.*/minSdkVersion 24/' android/app/build.gradle
           sed -i 's/minSdk .*/minSdk 24/' android/app/build.gradle
           sed -i 's/compileSdkVersion.*/compileSdkVersion 36/' android/app/build.gradle
           sed -i 's/compileSdk .*/compileSdk 36/' android/app/build.gradle
           sed -i 's/targetSdkVersion.*/targetSdkVersion 36/' android/app/build.gradle
-          sed -i 's/targetSdk .*/targetSdk 36/' android/app/build.gradle
-          sed -i 's/ndkVersion.*/ndkVersion "25.1.8937393"/' android/app/build.gradle
-          sed -i 's/flutter.minSdkVersion/24/' android/app/build.gradle
-          sed -i 's/flutter.compileSdkVersion/36/' android/app/build.gradle
-          sed -i 's/flutter.targetSdkVersion/36/' android/app/build.gradle
-          sed -i 's/flutter.ndkVersion/"25.1.8937393"/' android/app/build.gradle
           
-          echo "=== FINAL CHECK ==="
+          # 4. FIX JVM TARGET 1.8 vs 17 - THE FINAL FIX!
+          # Inject Java 17 compatibility into build.gradle
+          cat > /tmp/fix.py << 'PY'
+          with open('android/app/build.gradle','r') as f: s=f.read()
+          # Force Java 17
+          if 'compileOptions' not in s:
+              s=s.replace('android {', 'android {\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }\n    kotlinOptions {\n        jvmTarget = "17"\n    }')
+          else:
+              s=s.replace('JavaVersion.VERSION_1_8','JavaVersion.VERSION_17')
+              s=s.replace('JavaVersion.VERSION_1.8','JavaVersion.VERSION_17')
+              s=s.replace('"1.8"','"17"')
+              if 'jvmTarget' not in s:
+                  s=s.replace('compileOptions {', 'compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }\n    kotlinOptions {\n        jvmTarget = "17"\n    }\n    //OLD:')
+              else:
+                  s=s.replace('jvmTarget = "1.8"','jvmTarget = "17"')
+                  s=s.replace("jvmTarget = '1.8'","jvmTarget = '17'")
+          with open('android/app/build.gradle','w') as f: f.write(s)
+          print(s)
+          PY
+          python3 /tmp/fix.py
+          
+          echo "=== FINAL BUILD.GRADLE ==="
           cat android/app/build.gradle
-          echo "--- local.properties ---"
-          cat android/local.properties
+          
       - run: flutter pub get
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
