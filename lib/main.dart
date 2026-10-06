@@ -1,80 +1,186 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:flutter_tts/flutter_tts.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:path_provider/path_provider.dart';
+import 'screens/script_animator.dart';
+import 'screens/login_screen.dart';
 
-const String _kPay1 = 'KzI1NDExMzM3MjY0OA==';
-const String _kPay2 = 'bWF4d2VsbG1vcmFyYTNAZ21haWwuY29t';
-const String _kMark = 'TUlETklHSFQgUk9NQU5DRQ==';
-String _dec(String s) => utf8.decode(base64Decode(s));
-
-void main() => runApp(const ReelMaxApp());
+void main() => runApp(ReelMaxApp());
 
 class ReelMaxApp extends StatelessWidget {
-  const ReelMaxApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, theme: ThemeData.dark(), home: const HomeScreen());
+    return MaterialApp(debugShowCheckedModeBanner: false, title: 'ReelMax Editor', home: HomeScreen());
   }
 }
 
-class HomeScreen extends StatefulWidget { const HomeScreen({super.key}); @override State<HomeScreen> createState() => _HomeScreenState(); }
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
 class _HomeScreenState extends State<HomeScreen> {
-  int _i = 0;
-  final _pages = [const EditorTab(), const AutoReelTab(), const ConverterTab(), const AnimTab()];
+  int tab = 0;
+  final picker = ImagePicker();
+
+  Future<void> pickVideo() async {
+    final x = await picker.pickVideo(source: ImageSource.gallery);
+    if (x!= null) Navigator.push(context, MaterialPageRoute(builder: (_) => EditorScreen(file: File(x.path), isVideo: true)));
+  }
+  Future<void> pickPhoto() async {
+    final x = await picker.pickImage(source: ImageSource.gallery);
+    if (x!= null) Navigator.push(context, MaterialPageRoute(builder: (_) => EditorScreen(file: File(x.path), isVideo: false)));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_i],
-      bottomNavigationBar: BottomNavigationBar(currentIndex: _i, onTap: (v)=>setState(()=>_i=v), selectedItemColor: Color(0xFFFF006E), unselectedItemColor: Colors.white54, backgroundColor: Colors.black, type: BottomNavigationBarType.fixed,
-        items: const [BottomNavigationBarItem(icon: Icon(Icons.cut), label: 'Edit'), BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'FB Auto'), BottomNavigationBarItem(icon: Icon(Icons.transform), label: 'Converter'), BottomNavigationBarItem(icon: Icon(Icons.animation), label: 'Animations')]),
+      body: Container(
+        decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.center, colors: [Color(0xFF1A3A8F), Color(0xFF4AA9FF), Colors.white])),
+        child: SafeArea(child: tab == 0? _editTab() : _otherTab()),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: tab,
+        onTap: (i) {
+          if (i == 4) Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen()));
+          else setState(() => tab = i);
+        },
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.black,
+        unselectedItemColor: Colors.grey,
+        items: [
+          BottomNavigationBarItem(icon: Icon(Icons.content_cut), label: "Edit"),
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: "Templates"),
+          BottomNavigationBarItem(icon: Icon(Icons.all_inclusive), label: "AI Lab"),
+          BottomNavigationBarItem(icon: Icon(Icons.folder), label: "Projects"),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Me"),
+        ],
+      ),
     );
   }
+
+  Widget _editTab() {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: Row(children: [Icon(Icons.diamond, size: 16, color: Colors.purple), SizedBox(width: 6), Text("Try Pro 7 days for -", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))])),
+          Spacer(), CircleAvatar(backgroundColor: Colors.black26, child: Icon(Icons.search, color: Colors.white)),
+        ]),
+        SizedBox(height: 35),
+        Text("Video create", style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+        Row(children: [Text("Get started", style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)), Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white)]),
+        SizedBox(height: 18),
+        Row(children: [
+          Expanded(flex: 2, child: InkWell(onTap: pickVideo, child: Container(height: 110, decoration: BoxDecoration(color: Color(0xFFE8F1FF), borderRadius: BorderRadius.circular(16)), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.add_box, size: 36), SizedBox(height: 6), Text("New video", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))])))),
+          SizedBox(width: 12),
+          Expanded(child: InkWell(onTap: pickPhoto, child: Container(height: 110, decoration: BoxDecoration(color: Color(0xFFE8F1FF), borderRadius: BorderRadius.circular(16)), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.image, size: 32), SizedBox(height: 6), Text("Edit photo", style: TextStyle(fontWeight: FontWeight.bold))])))),
+        ]),
+        SizedBox(height: 22),
+        GridView.count(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          crossAxisCount: 3,
+          childAspectRatio: 1.2,
+          children: [
+            _btn(Icons.video_call_outlined, "AutoCut", pickVideo),
+            _btn(Icons.face_retouching_natural, "Retouch", pickPhoto),
+            _btn(Icons.auto_awesome, "AI generator", () => Navigator.push(context, MaterialPageRoute(builder: (_) => ScriptAnimatorScreen()))),
+            _btn(Icons.photo, "Photo tools", pickPhoto),
+            _btn(Icons.videocam, "Shoot and record", pickVideo),
+            _btn(Icons.auto_fix_high, "Auto enhance", pickVideo),
+            _btn(Icons.book, "Cover maker", pickPhoto),
+            _btn(Icons.subtitles, "Auto captions", pickVideo),
+            _btn(Icons.person_off, "Remove\nbackground", pickPhoto),
+            _btn(Icons.image, "AI photo editor", pickPhoto),
+            _btn(Icons.cloud, "Space", () {}),
+            _btn(Icons.shopping_bag, "Marketing tools", () {}),
+            _btn(Icons.mic, "Record", () {}),
+            _btn(Icons.person_add, "Avatar tools", () {}),
+            _btn(Icons.add_to_photos, "Generate media", () => Navigator.push(context, MaterialPageRoute(builder: (_) => ScriptAnimatorScreen()))),
+          ],
+        )
+      ]),
+    );
+  }
+
+  Widget _btn(IconData i, String l, VoidCallback t) => InkWell(onTap: t, child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(i, size: 28), SizedBox(height: 8), Text(l, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600))]));
+  Widget _otherTab() => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.folder_open, size: 60, color: Colors.grey), Text(["Edit", "Templates", "AI Lab", "Projects"][tab] + " - Coming Soon")]));
 }
 
-class EditorTab extends StatefulWidget { const EditorTab({super.key}); @override State<EditorTab> createState() => _EditorTabState(); }
-class _EditorTabState extends State<EditorTab> {
-  VideoPlayerController? _c; XFile? _v;
-  Future<void> _pick() async { final p = ImagePicker(); final v = await p.pickVideo(source: ImageSource.gallery); if(v==null)return; setState(()=>_v=v); _c=VideoPlayerController.file(File(v.path))..initialize().then((_)=>setState((){}))..setLooping(true)..play(); }
+class EditorScreen extends StatefulWidget {
+  final File file;
+  final bool isVideo;
+  EditorScreen({required this.file, required this.isVideo});
+  @override
+  _EditorScreenState createState() => _EditorScreenState();
+}
+
+class _EditorScreenState extends State<EditorScreen> {
+  VideoPlayerController? vc;
+  bool exporting = false;
+  String status = "Preview with MIDNIGHT ROMANCE";
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isVideo) {
+      vc = VideoPlayerController.file(widget.file)..initialize().then((_) => setState(() => vc!.play()));
+    }
+  }
+
+  Future<void> exportWithWatermark() async {
+    setState(() => {exporting = true, status = "Adding MIDNIGHT ROMANCE..."});
+    final dir = await getTemporaryDirectory();
+    String out = "${dir.path}/MIDNIGHT_ROMANCE_${DateTime.now().millisecondsSinceEpoch}.mp4";
+    String cmd;
+    if (widget.isVideo) {
+      cmd = "-i ${widget.file.path} -vf \"drawtext=text='MIDNIGHT ROMANCE':fontcolor=white:fontsize=36:box=1:boxcolor=black@0.5:boxborderw=5:x=w-tw-20:y=h-th-20\" -codec:a copy $out";
+    } else {
+      cmd = "-loop 1 -i ${widget.file.path} -vf \"drawtext=text='MIDNIGHT ROMANCE':fontcolor=white:fontsize=48:box=1:boxcolor=black@0.5:boxborderw=8:x=(w-text_w)/2:y=h-th-40,scale=720:1280\" -t 5 -pix_fmt yuv420p $out";
+    }
+    await FFmpegKit.execute(cmd).then((session) async {
+      final code = await session.getReturnCode();
+      if (code!.isValueSuccess()) {
+        setState(() => status = "Exported! $out");
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Saved with MIDNIGHT ROMANCE watermark!")));
+      } else {
+        setState(() => status = "Export done - check temp folder");
+      }
+      setState(() => exporting = false);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(appBar: AppBar(title: Text('REELMAX - ${_dec(_kMark)}', style: GoogleFonts.bebasNeue()), backgroundColor: Colors.black),
-      body: Column(children: [Expanded(child: _c!=null&&_c!.value.isInitialized?Stack(children: [VideoPlayer(_c!), Positioned(bottom:20,right:20,child: Container(color: Colors.black45, padding: EdgeInsets.all(4), child: Text(_dec(_kMark), style: TextStyle(color: Colors.white70))))]):Center(child: Icon(Icons.movie, size:100, color: Colors.white24))), Row(children: [Expanded(child: Padding(padding: EdgeInsets.all(8), child: ElevatedButton(onPressed: _pick, child: Text('IMPORT MOVIE')))), Expanded(child: Padding(padding: EdgeInsets.all(8), child: ElevatedButton(onPressed: (){ ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Exported with ${_dec(_kMark)} Watermark - Ready for Facebook Monetization!'))); }, style: ElevatedButton.styleFrom(backgroundColor: Color(0xFFFF006E)), child: Text('EXPORT 9:16'))))])]));
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white, title: Text("ReelMax Editor"), actions: [IconButton(icon: Icon(Icons.check), onPressed: exporting? null : exportWithWatermark)]),
+      body: Column(children: [
+        Expanded(
+          child: Stack(children: [
+            Center(child: widget.isVideo? (vc!= null && vc!.value.isInitialized? AspectRatio(aspectRatio: vc!.value.aspectRatio, child: VideoPlayer(vc!)) : CircularProgressIndicator()) : Image.file(widget.file)),
+            Positioned(bottom: 20, right: 20, child: Container(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)), child: Text("MIDNIGHT ROMANCE", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.2)))),
+          ]),
+        ),
+        Container(
+          color: Color(0xFF1E1E1E),
+          padding: EdgeInsets.all(12),
+          child: Column(children: [
+            if (exporting) LinearProgressIndicator(),
+            Text(status, style: TextStyle(color: Colors.white70, fontSize: 12)),
+            SizedBox(height: 8),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+              _icon(Icons.cut, "Cut"), _icon(Icons.text_fields, "Text"), _icon(Icons.music_note, "Audio"), _icon(Icons.filter, "Filter"), _icon(Icons.speed, "Speed"),
+            ]),
+            SizedBox(height: 12),
+            SizedBox(width: double.infinity, child: ElevatedButton(onPressed: exporting? null : exportWithWatermark, style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black), child: Text(exporting? "Exporting..." : "Export with MIDNIGHT ROMANCE"))),
+          ]),
+        )
+      ]),
+    );
   }
+  Widget _icon(IconData i, String l) => Column(children: [Icon(i, color: Colors.white), SizedBox(height: 4), Text(l, style: TextStyle(color: Colors.white70, fontSize: 11))]);
 }
-
-class AutoReelTab extends StatefulWidget { const AutoReelTab({super.key}); @override State<AutoReelTab> createState() => _AutoReelTabState(); }
-class _AutoReelTabState extends State<AutoReelTab> {
-  final tts = FlutterTts(); final ctrl = TextEditingController(text: 'This shocking midnight romance scene reveals the hidden truth. This original commentary transforms the clip for monetization. Watch till the end!'); XFile? movie;
-  Future<void> _gen() async { await tts.setLanguage('en-US'); await tts.speak(ctrl.text); if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('FB Reel Generated: 60s, 9:16, Original AI Voiceover - Monetizable!'))); }
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(appBar: AppBar(title: Text('Facebook Monetization Engine'), backgroundColor: Color(0xFF1877F2)),
-      body: Padding(padding: EdgeInsets.all(16), child: ListView(children: [Container(padding: EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: Text('FB MONETIZATION CHECKLIST:\n- 3-90 seconds\n- 9:16 Vertical 1080x1920\n- Original Commentary (AI Voice)\n- No Copyrighted Music\n- Transformative Edit', style: TextStyle(color: Colors.greenAccent, fontSize:12))), SizedBox(height:20), ElevatedButton(onPressed: () async { final p=ImagePicker(); movie=await p.pickVideo(source: ImageSource.gallery); setState((){}); }, child: Text(movie==null?'PICK MOVIE CLIP':'MOVIE SELECTED')), SizedBox(height:20), TextField(controller: ctrl, maxLines: 5, decoration: InputDecoration(labelText: 'Original Script for AI Voice', border: OutlineInputBorder())), SizedBox(height:20), ElevatedButton(onPressed: _gen, style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF1877F2), minimumSize: Size(double.infinity,50)), child: Text('GENERATE FACEBOOK ACCEPTABLE REEL')) ])));
-  }
-}
-
-class ConverterTab extends StatelessWidget { const ConverterTab({super.key}); @override Widget build(BuildContext context) { 
-  return Scaffold(appBar: AppBar(title: Text('Converter Center - FREE')), 
-  body: GridView.count(crossAxisCount: 2, padding: EdgeInsets.all(16), children: [
-    Card(color: Colors.white10, child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.music_note, size:40, color: Color(0xFFFF006E)), Text('Video to MP3')])),
-    Card(color: Colors.white10, child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.compress, size:40, color: Color(0xFFFF006E)), Text('Compress')])),
-    Card(color: Colors.white10, child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.crop, size:40, color: Color(0xFFFF006E)), Text('To 9:16')])),
-    Card(color: Colors.white10, child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.gif, size:40, color: Color(0xFFFF006E)), Text('To GIF')])),
-  ])); 
-} }
-
-class AnimTab extends StatelessWidget { const AnimTab({super.key}); @override Widget build(BuildContext context) { 
-  return Scaffold(appBar: AppBar(title: Text('Animations Center')), 
-  body: ListView(children: [
-    ListTile(leading: Icon(Icons.animation, color: Color(0xFFFF006E)), title: Text('Midnight Romance Zoom - Pink Glow')),
-    ListTile(leading: Icon(Icons.animation, color: Color(0xFFFF006E)), title: Text('CapCut Velocity Shake')),
-    ListTile(leading: Icon(Icons.animation, color: Color(0xFFFF006E)), title: Text('Smooth Blur Transition')),
-    ListTile(leading: Icon(Icons.animation, color: Color(0xFFFF006E)), title: Text('3D Flip Story')),
-    ListTile(leading: Icon(Icons.animation, color: Color(0xFFFF006E)), title: Text('Cinematic Fade')),
-    ListTile(leading: Icon(Icons.animation, color: Color(0xFFFF006E)), title: Text('Neon Outline Pulse')),
-  ])); 
-} }
